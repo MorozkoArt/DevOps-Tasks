@@ -1,0 +1,83 @@
+---
+- name: Install Docker and run HTTP checker
+  hosts: localhost
+  become: yes
+  vars:
+    project_root: "{{ lookup('env', 'PWD') }}/.."  # Путь к корню проекта
+  tasks:
+    # Установка зависимостей
+    - name: Install required system packages
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      loop:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - software-properties-common
+        - python3-pip
+
+    # Добавление Docker GPG ключа
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    # Добавление Docker репозитория
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
+        state: present
+
+    # Установка Docker
+    - name: Install Docker
+      apt:
+        name: docker-ce
+        state: present
+
+    # Добавление пользователя в группу docker
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    # Проверка установки Docker
+    - name: Verify Docker installation
+      command: docker --version
+      register: docker_version
+      changed_when: false
+
+    - name: Show Docker version
+      debug:
+        var: docker_version.stdout
+
+    # Сборка Docker образа
+    - name: Build Docker image
+      community.docker.docker_image:
+        name: http-checker
+        source: build
+        build:
+          path: "{{ project_root }}"
+          dockerfile: "2_Docker_image/Dockerfile"
+        state: present
+
+
+    # Запуск контейнера
+    - name: Run HTTP checker container
+      community.docker.docker_container:
+        name: http-checker-container
+        image: http-checker
+        state: started
+        detach: true
+
+    # Проверка логов
+    - name: Get container logs
+      community.docker.docker_container_logs:
+        container: http-checker-container
+      register: container_logs
+
+    - name: Display logs
+      debug:
+        var: container_logs.log
