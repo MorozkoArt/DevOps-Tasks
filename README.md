@@ -55,6 +55,8 @@ docker logs checker
 1. Установите Ansible
 
 ```bash
+sudo apt update && sudo apt install -y ansible python3-pip
+# или
 pip install ansible
 ```
 
@@ -77,5 +79,6 @@ your-server-ip ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/your-key.
 3. Запустите playbook
 
 ```bash
+cd 3_Ansible_automation
 ansible-playbook -i inventory.ini playbook.yml
 ```
